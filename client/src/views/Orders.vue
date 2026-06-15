@@ -8,6 +8,49 @@
     <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
     <div v-else-if="error" class="error">{{ error }}</div>
     <div v-else>
+      <div v-if="submittedOrders.length > 0" class="card submitted-orders-card">
+        <div class="card-header">
+          <h3 class="card-title">Submitted Orders ({{ submittedOrders.length }})</h3>
+          <span class="badge submitted">Restocking</span>
+        </div>
+        <div class="table-container">
+          <table class="orders-table">
+            <thead>
+              <tr>
+                <th class="col-order-number">Order Number</th>
+                <th class="col-items">Items</th>
+                <th class="col-date">Date Placed</th>
+                <th class="col-date">Expected Delivery</th>
+                <th class="col-lead">Lead Time</th>
+                <th class="col-value">Total Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="order in submittedOrders" :key="order.id">
+                <td class="col-order-number"><strong>{{ order.order_number }}</strong></td>
+                <td class="col-items">
+                  <details class="items-details">
+                    <summary class="items-summary">
+                      {{ t('orders.itemsCount', { count: order.items.length }) }}
+                    </summary>
+                    <div class="items-dropdown">
+                      <div v-for="(item, idx) in order.items" :key="idx" class="item-entry">
+                        <span class="item-name">{{ item.name }}</span>
+                        <span class="item-meta">Qty: {{ item.quantity }} @ {{ currencySymbol }}{{ item.unit_price }}</span>
+                      </div>
+                    </div>
+                  </details>
+                </td>
+                <td class="col-date">{{ formatDate(order.order_date) }}</td>
+                <td class="col-date">{{ formatDate(order.expected_delivery) }}</td>
+                <td class="col-lead"><span class="lead-time-badge">30 days</span></td>
+                <td class="col-value"><strong>{{ currencySymbol }}{{ order.total_value.toLocaleString() }}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="stats-grid">
         <div class="stat-card success">
           <div class="stat-label">{{ t('status.delivered') }}</div>
@@ -63,7 +106,7 @@
                 </td>
                 <td class="col-status">
                   <span :class="['badge', getOrderStatusClass(order.status)]">
-                    {{ t(`status.${order.status.toLowerCase()}`) }}
+                    {{ order.status === 'Submitted' ? 'Submitted' : t(`status.${order.status.toLowerCase()}`) }}
                   </span>
                 </td>
                 <td class="col-date">{{ formatDate(order.order_date) }}</td>
@@ -95,6 +138,10 @@ export default {
     const loading = ref(true)
     const error = ref(null)
     const orders = ref([])
+
+    const submittedOrders = computed(() =>
+      orders.value.filter(o => o.status === 'Submitted')
+    )
 
     // Use shared filters
     const {
@@ -138,7 +185,8 @@ export default {
         'Delivered': 'success',
         'Shipped': 'info',
         'Processing': 'warning',
-        'Backordered': 'danger'
+        'Backordered': 'danger',
+        'Submitted': 'submitted'
       }
       return statusMap[status] || 'info'
     }
@@ -160,6 +208,7 @@ export default {
       loading,
       error,
       orders,
+      submittedOrders,
       getOrdersByStatus,
       getOrderStatusClass,
       formatDate,
@@ -275,5 +324,33 @@ export default {
 .item-meta {
   font-size: 0.813rem;
   color: #64748b;
+}
+
+/* Submitted orders card */
+.submitted-orders-card {
+  border-left: 4px solid #6366f1;
+  margin-bottom: 1.25rem;
+}
+
+/* 'submitted' badge style (global .badge class doesn't have this variant — add scoped) */
+.badge.submitted {
+  background: #ede9fe;
+  color: #4338ca;
+}
+
+/* Lead time badge */
+.lead-time-badge {
+  display: inline-block;
+  padding: 0.25rem 0.625rem;
+  background: #f0fdf4;
+  color: #059669;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.col-lead {
+  width: 100px;
 }
 </style>
