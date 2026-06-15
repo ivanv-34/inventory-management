@@ -120,6 +120,10 @@ class CreatePurchaseOrderRequest(BaseModel):
     expected_delivery_date: str
     notes: Optional[str] = None
 
+class CreateRestockOrderRequest(BaseModel):
+    items: List[dict]
+    total_value: float
+
 # API endpoints
 @app.get("/")
 def root():
@@ -303,6 +307,27 @@ def get_monthly_trends():
     result = list(months.values())
     result.sort(key=lambda x: x['month'])
     return result
+
+@app.post("/api/orders/restock", response_model=Order)
+def create_restock_order(request: CreateRestockOrderRequest):
+    """Create a new restocking order from demand forecast recommendations"""
+    from datetime import datetime, timedelta
+    now = datetime.now()
+    new_order = {
+        "id": str(len(orders) + 1),
+        "order_number": f"RST-{now.strftime('%Y%m%d%H%M%S')}",
+        "customer": "Internal Restocking",
+        "items": request.items,
+        "status": "Submitted",
+        "order_date": now.isoformat(),
+        "expected_delivery": (now + timedelta(days=30)).isoformat(),
+        "total_value": request.total_value,
+        "warehouse": "San Francisco",
+        "category": "Mixed",
+        "actual_delivery": None,
+    }
+    orders.append(new_order)
+    return new_order
 
 if __name__ == "__main__":
     import uvicorn
